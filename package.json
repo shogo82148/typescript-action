@@ -21,9 +21,7 @@
     "url": "git+https://github.com/actions/typescript-action.git"
   },
   "keywords": [
-    "actions",
-    "node",
-    "setup"
+    "actions"
   ],
   "author": "",
   "license": "MIT",
