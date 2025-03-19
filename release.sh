@@ -11,8 +11,10 @@ PATCH=$(echo "$VERSION" | cut -d. -f3)
 
 cd "$CURRENT"
 
-gh release create "v$MAJOR.$MINOR.$PATCH" \
-    --target "$(git rev-parse HEAD)" --title "v$MAJOR.$MINOR.$PATCH" --generate-notes
-
+# update "v$MAJOR" tag
 git tag -sfa "v$MAJOR" -m "release v$MAJOR.$MINOR.$PATCH"
 git push -f origin "v$MAJOR"
+
+# update "v$MAJOR.$MINOR.$PATCH" tag
+gh release create "v$MAJOR.$MINOR.$PATCH" \
+    --target "$(git rev-parse HEAD)" --title "v$MAJOR.$MINOR.$PATCH" --generate-notes
