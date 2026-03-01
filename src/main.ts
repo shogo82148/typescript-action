@@ -1,7 +1,12 @@
 import * as core from "@actions/core";
-import { wait } from "./wait";
+import { wait } from "./wait.js";
 
-async function run(): Promise<void> {
+/**
+ * The main function for the action.
+ *
+ * @returns Resolves when the action is complete.
+ */
+export async function run(): Promise<void> {
   try {
     const ms: string = core.getInput("milliseconds");
     core.debug(`Waiting ${ms} milliseconds ...`); // debug is only output if you set the secret `ACTIONS_STEP_DEBUG` to true
@@ -15,5 +20,3 @@ async function run(): Promise<void> {
     if (error instanceof Error) core.setFailed(error.message);
   }
 }
-
-void run();
