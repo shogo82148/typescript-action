@@ -1,29 +1,57 @@
-import { wait } from "../src/wait";
-import * as process from "process";
-import * as cp from "child_process";
-import * as path from "path";
-import { expect, test } from "@jest/globals";
+/**
+ * Unit tests for the action's main functionality, src/main.ts
+ *
+ * To mock dependencies in ESM, you can create fixtures that export mock
+ * functions and objects. For example, the core module is mocked in this test,
+ * so that the actual '@actions/core' module is not imported.
+ */
+import { jest } from "@jest/globals";
+import * as core from "../__fixtures__/core.js";
+import { wait } from "../__fixtures__/wait.js";
 
-test("throws invalid number", async () => {
-  const input = parseInt("foo", 10);
-  await expect(wait(input)).rejects.toThrow("milliseconds not a number");
-});
+// Mocks should be declared before the module being tested is imported.
+jest.unstable_mockModule("@actions/core", () => core);
+jest.unstable_mockModule("../src/wait.js", () => ({ wait }));
 
-test("wait 500 ms", async () => {
-  const start = new Date();
-  await wait(500);
-  const end = new Date();
-  const delta = Math.abs(end.getTime() - start.getTime());
-  expect(delta).toBeGreaterThan(450);
-});
+// The module being tested should be imported dynamically. This ensures that the
+// mocks are used in place of any actual dependencies.
+const { run } = await import("../src/main.js");
 
-// shows how the runner will run a javascript action with env / stdout protocol
-test("test runs", () => {
-  process.env["INPUT_MILLISECONDS"] = "500";
-  const np = process.execPath;
-  const ip = path.join(__dirname, "..", "lib", "main.js");
-  const options: cp.ExecFileSyncOptions = {
-    env: process.env,
-  };
-  console.log(cp.execFileSync(np, [ip], options).toString());
+describe("main.ts", () => {
+  beforeEach(() => {
+    // Set the action's inputs as return values from core.getInput().
+    core.getInput.mockImplementation(() => "500");
+
+    // Mock the wait function so that it does not actually wait.
+    wait.mockImplementation(() => Promise.resolve("done!"));
+  });
+
+  afterEach(() => {
+    jest.resetAllMocks();
+  });
+
+  it("Sets the time output", async () => {
+    await run();
+
+    // Verify the time output was set.
+    expect(core.setOutput).toHaveBeenNthCalledWith(
+      1,
+      "time",
+      // Simple regex to match a time string in the format HH:MM:SS.
+      expect.stringMatching(/^\d{2}:\d{2}:\d{2}/),
+    );
+  });
+
+  it("Sets a failed status", async () => {
+    // Clear the getInput mock and return an invalid value.
+    core.getInput.mockClear().mockReturnValueOnce("this is not a number");
+
+    // Clear the wait mock and return a rejected promise.
+    wait.mockClear().mockRejectedValueOnce(new Error("milliseconds is not a number"));
+
+    await run();
+
+    // Verify that the action was marked as failed.
+    expect(core.setFailed).toHaveBeenNthCalledWith(1, "milliseconds is not a number");
+  });
 });
